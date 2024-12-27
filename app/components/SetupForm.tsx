@@ -10,6 +10,7 @@ import { updateUserDetails } from '../lib/api'
 
 export default function SetupForm() {
   const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
   const [address, setAddress] = useState('')
   const [latitude, setLatitude] = useState<number | null>(null)
   const [longitude, setLongitude] = useState<number | null>(null)
@@ -55,6 +56,16 @@ export default function SetupForm() {
               id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
+              required
+            />
+          </div>
+          <div>
+            <Label htmlFor="name">Email</Label>
+            <Input
+              id="email"
+              value={email}
+              type='email'
+              onChange={(e) => setEmail(e.target.value)}
               required
             />
           </div>

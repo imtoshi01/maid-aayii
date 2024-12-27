@@ -20,7 +20,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { getServiceProviders, getAttendance, submitAttendance } from '../lib/api'
+import { getMonthlyAttendance, submitAttendance } from '../lib/api'
 
 interface ServiceProvider {
   id: number;
@@ -30,12 +30,9 @@ interface ServiceProvider {
 }
 
 interface AttendanceRecord {
-  id: number;
   service_provider_id: number;
   date: string;
   present: boolean;
-  name: string;
-  role: string;
 }
 
 const colors = ['bg-red-500', 'bg-blue-500', 'bg-green-500', 'bg-yellow-500', 'bg-purple-500'];
@@ -45,19 +42,32 @@ export default function PreviousAttendance() {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [editAttendance, setEditAttendance] = useState<Record<number, boolean>>({});
   const [serviceProviders, setServiceProviders] = useState<ServiceProvider[]>([]);
-  const [monthlyAttendance, setMonthlyAttendance] = useState<Record<number, number>>({});
+  const [monthlyAttendance, setMonthlyAttendance] = useState<AttendanceRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        const providers = await getServiceProviders();
-        setServiceProviders(providers.map((provider: ServiceProvider, index: number) => ({
-          ...provider,
-          color: colors[index % colors.length]
-        })));
-        await fetchMonthlyAttendance();
+        const attendanceData = await getMonthlyAttendance(currentDate.getFullYear(), currentDate.getMonth() + 1);
+        console.log(attendanceData);
+        setMonthlyAttendance(attendanceData);
+
+        const uniqueProviders: ServiceProvider[] = Array.from(new Set(attendanceData.map((record: AttendanceRecord) => record.service_provider_id)))
+          .map((id, ind) => {
+            id = id as number;
+            const providerData = attendanceData.find((record: AttendanceRecord) => record.service_provider_id === id);
+            return {
+              id,
+              name: providerData?.name || '',
+              role: providerData?.role || '',
+              color: colors[ind % colors.length],
+            } as ServiceProvider;
+          });
+
+          console.log("uniqueProviders");
+          console.log(uniqueProviders);
+        setServiceProviders(uniqueProviders);
       } catch (error) {
         console.error('Error fetching data:', error);
       }
@@ -66,25 +76,6 @@ export default function PreviousAttendance() {
 
     fetchData();
   }, [currentDate]);
-
-  const fetchMonthlyAttendance = async () => {
-    const daysInMonth = getDaysInMonth(currentDate);
-    const monthlyAttendance: Record<number, number> = {};
-
-    for (let day = 1; day <= daysInMonth; day++) {
-      const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
-      const dateString = date.toISOString().split('T')[0];
-      const attendanceData = await getAttendance(dateString);
-
-      attendanceData.forEach((record: AttendanceRecord) => {
-        if (record.present) {
-          monthlyAttendance[record.service_provider_id] = (monthlyAttendance[record.service_provider_id] || 0) + 1;
-        }
-      });
-    }
-
-    setMonthlyAttendance(monthlyAttendance);
-  };
 
   const getDaysInMonth = (date: Date) => {
     return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
@@ -114,14 +105,15 @@ export default function PreviousAttendance() {
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + delta, 1));
   }
 
-  const handleDateClick = async (day: number) => {
+  const handleDateClick = (day: number) => {
     const clickedDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
     setSelectedDate(clickedDate);
     const dateString = clickedDate.toISOString().split('T')[0];
-    const attendanceData = await getAttendance(dateString);
     const attendanceMap: Record<number, boolean> = {};
-    attendanceData.forEach((record: AttendanceRecord) => {
-      attendanceMap[record.service_provider_id] = record.present;
+    monthlyAttendance.forEach(record => {
+      if (record.date === dateString) {
+        attendanceMap[record.service_provider_id] = record.present;
+      }
     });
     setEditAttendance(attendanceMap);
   }
@@ -138,7 +130,10 @@ export default function PreviousAttendance() {
       const dateString = selectedDate.toISOString().split('T')[0];
       await submitAttendance(dateString, editAttendance);
       setSelectedDate(null);
-      await fetchMonthlyAttendance();
+      // Refresh the monthly attendance data
+      const attendanceData = await getMonthlyAttendance(currentDate.getFullYear(), currentDate.getMonth() + 1);
+      console.log(attendanceData);
+      setMonthlyAttendance(attendanceData);
     }
   }
 
@@ -170,15 +165,25 @@ export default function PreviousAttendance() {
             {generateCalendarDays().map((day, index) => (
               <Dialog key={index}>
                 <DialogTrigger asChild>
-                  <div className="aspect-square border p-1 text-sm cursor-pointer">
+                  <div className={`aspect-square border p-1 text-sm cursor-pointer ${day ? 'hover:bg-gray-100' : ''}`}>
                     {day}
                     {day && (
                       <div className="flex flex-wrap gap-1 mt-1">
-                        {serviceProviders.map(provider => (
-                          monthlyAttendance[provider.id] && monthlyAttendance[provider.id] >= day ? (
+                        {serviceProviders.map(provider => {
+                          const dateString = new Date(currentDate.getFullYear(), currentDate.getMonth(), day).toISOString().split('T')[0];
+                          
+                          const isPresent = monthlyAttendance.some(record => {
+                            console.log("record.date:", record.date); // Print the value of record.date
+                            return (
+                              record.service_provider_id === provider.id &&
+                              record.date.includes(dateString) &&
+                              record.present
+                            );
+                          });
+                          return isPresent ? (
                             <div key={provider.id} className={`w-2 h-2 rounded-full ${provider.color}`} />
-                          ) : null
-                        ))}
+                          ) : null;
+                        })}
                       </div>
                     )}
                   </div>
@@ -234,16 +239,21 @@ export default function PreviousAttendance() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {serviceProviders.map((provider) => (
-                <TableRow key={provider.id}>
-                  <TableCell className="font-medium">{provider.name}</TableCell>
-                  <TableCell>{provider.role}</TableCell>
-                  <TableCell className="text-right">{monthlyAttendance[provider.id] || 0}</TableCell>
-                  <TableCell className="text-right">
-                    <div className={`w-6 h-6 rounded-full ${provider.color} inline-block`}></div>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {serviceProviders.map((provider) => {
+                const daysPresent = monthlyAttendance.filter(record => 
+                  record.service_provider_id === provider.id && record.present
+                ).length;
+                return (
+                  <TableRow key={provider.id}>
+                    <TableCell className="font-medium">{provider.name}</TableCell>
+                    <TableCell>{provider.role}</TableCell>
+                    <TableCell className="text-right">{daysPresent}</TableCell>
+                    <TableCell className="text-right">
+                      <div className={`w-6 h-6 rounded-full ${provider.color} inline-block`}></div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </CardContent>

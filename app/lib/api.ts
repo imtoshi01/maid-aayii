@@ -44,6 +44,7 @@ export async function verifyOTP(mobile: string, otp: string) {
 
 export async function updateUserDetails(userData: {
   name: string;
+  email: string;
   address: string;
   latitude: number | null;
   longitude: number | null;
@@ -105,3 +106,14 @@ export async function addServiceProvider(data: Record<string, string>) {
   return response.json();
 }
 
+export async function getMonthlyAttendance(year: number, month: number) {
+  const response = await fetch(`${API_BASE_URL}/monthly-attendance/${year}/${month.toString().padStart(2, '0')}`, {
+    headers: getHeaders(),
+  });
+  if (!response.ok) {
+    throw new Error('Failed to fetch monthly attendance');
+  }
+  // const data = await response.json();
+  // console.log(data)
+  return response.json();
+}
