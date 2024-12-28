@@ -1,9 +1,9 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
+import { useState, useEffect, useMemo } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Table,
   TableBody,
@@ -11,16 +11,16 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
+} from '@/components/ui/table';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
-import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { getMonthlyAttendance, submitAttendance } from '../lib/api'
+} from '@/components/ui/dialog';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { getMonthlyAttendance, submitAttendance } from '../lib/api';
 
 interface ServiceProvider {
   id: number;
@@ -65,8 +65,8 @@ export default function PreviousAttendance() {
             } as ServiceProvider;
           });
 
-          console.log("uniqueProviders");
-          console.log(uniqueProviders);
+        console.log('uniqueProviders');
+        console.log(uniqueProviders);
         setServiceProviders(uniqueProviders);
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -77,13 +77,22 @@ export default function PreviousAttendance() {
     fetchData();
   }, [currentDate]);
 
+  const isPresentMap = useMemo(() => {
+    const map = new Map<string, boolean>();
+    monthlyAttendance.forEach(record => {
+      const normalizedDate = new Date(record.date).toISOString().split('T')[0]; // Convert to YYYY-MM-DD format
+      map.set(normalizedDate, record.present);
+    });
+    return map;
+  }, [monthlyAttendance]);
+
   const getDaysInMonth = (date: Date) => {
     return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
-  }
+  };
 
   const getFirstDayOfMonth = (date: Date) => {
     return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
-  }
+  };
 
   const generateCalendarDays = () => {
     const daysInMonth = getDaysInMonth(currentDate);
@@ -99,11 +108,11 @@ export default function PreviousAttendance() {
     }
 
     return days;
-  }
+  };
 
   const navigateMonth = (delta: number) => {
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + delta, 1));
-  }
+  };
 
   const handleDateClick = (day: number) => {
     const clickedDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
@@ -116,26 +125,24 @@ export default function PreviousAttendance() {
       }
     });
     setEditAttendance(attendanceMap);
-  }
+  };
 
   const handleAttendanceChange = (id: number, checked: boolean) => {
     setEditAttendance(prev => ({
       ...prev,
-      [id]: checked
+      [id]: checked,
     }));
-  }
+  };
 
-  const handleSaveAttendance = async () => {
-    if (selectedDate) {
-      const dateString = selectedDate.toISOString().split('T')[0];
-      await submitAttendance(dateString, editAttendance);
-      setSelectedDate(null);
-      // Refresh the monthly attendance data
-      const attendanceData = await getMonthlyAttendance(currentDate.getFullYear(), currentDate.getMonth() + 1);
-      console.log(attendanceData);
-      setMonthlyAttendance(attendanceData);
-    }
-  }
+  const handleSaveAttendance = async (day: number) => {
+    const saveDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day+1);
+    const dateString = saveDate.toISOString().split('T')[0];
+    const res = await submitAttendance(dateString, editAttendance);
+    console.log(res);
+    setSelectedDate(null);
+    const attendanceData = await getMonthlyAttendance(currentDate.getFullYear(), currentDate.getMonth() + 1);
+    setMonthlyAttendance(attendanceData);
+  };
 
   if (isLoading) {
     return <div>Loading...</div>;
@@ -162,65 +169,68 @@ export default function PreviousAttendance() {
             {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
               <div key={day} className="font-bold">{day}</div>
             ))}
-            {generateCalendarDays().map((day, index) => (
-              <Dialog key={index}>
-                <DialogTrigger asChild>
-                  <div className={`aspect-square border p-1 text-sm cursor-pointer ${day ? 'hover:bg-gray-100' : ''}`}>
-                    {day}
-                    {day && (
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {serviceProviders.map(provider => {
-                          const dateString = new Date(currentDate.getFullYear(), currentDate.getMonth(), day).toISOString().split('T')[0];
-                          
-                          const isPresent = monthlyAttendance.some(record => {
-                            console.log("record.date:", record.date); // Print the value of record.date
-                            return (
-                              record.service_provider_id === provider.id &&
-                              record.date.includes(dateString) &&
-                              record.present
-                            );
-                          });
-                          return isPresent ? (
-                            <div key={provider.id} className={`w-2 h-2 rounded-full ${provider.color}`} />
-                          ) : null;
-                        })}
-                      </div>
-                    )}
-                  </div>
-                </DialogTrigger>
-                {day && (
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Edit Attendance for {new Date(currentDate.getFullYear(), currentDate.getMonth(), day).toDateString()}</DialogTitle>
-                    </DialogHeader>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Name</TableHead>
-                          <TableHead>Role</TableHead>
-                          <TableHead className="text-right">Present</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {serviceProviders.map((provider) => (
-                          <TableRow key={provider.id}>
-                            <TableCell>{provider.name}</TableCell>
-                            <TableCell>{provider.role}</TableCell>
-                            <TableCell className="text-right">
-                              <Checkbox
-                                checked={editAttendance[provider.id] || false}
-                                onCheckedChange={(checked) => handleAttendanceChange(provider.id, checked as boolean)}
-                              />
-                            </TableCell>
+            {generateCalendarDays().map((day, index) => {
+              const dateString = day
+                ? new Date(currentDate.getFullYear(), currentDate.getMonth(), day).toISOString().split('T')[0]
+                : null;
+              const isPresent = dateString ? isPresentMap.get(dateString) || false : false;
+
+              return (
+                <Dialog key={index}>
+                  <DialogTrigger asChild>
+                    <div
+                      className={`aspect-square border p-1 text-sm cursor-pointer ${day ? 'hover:bg-gray-100' : ''} ${
+                        isPresent ? 'bg-red-100' : ''
+                      }`}
+                    >
+                      {day}
+                      {day && (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {serviceProviders.map(provider => {
+                            return isPresent ? (
+                              <div key={provider.id} className={`w-2 h-2 rounded-full ${provider.color}`} />
+                            ) : null;
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </DialogTrigger>
+                  {day && (
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>
+                          Edit Attendance for {new Date(currentDate.getFullYear(), currentDate.getMonth(), day).toDateString()}
+                        </DialogTitle>
+                      </DialogHeader>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Name</TableHead>
+                            <TableHead>Role</TableHead>
+                            <TableHead className="text-right">Present</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                    <Button onClick={handleSaveAttendance}>Save Attendance</Button>
-                  </DialogContent>
-                )}
-              </Dialog>
-            ))}
+                        </TableHeader>
+                        <TableBody>
+                          {serviceProviders.map(provider => (
+                            <TableRow key={provider.id}>
+                              <TableCell>{provider.name}</TableCell>
+                              <TableCell>{provider.role}</TableCell>
+                              <TableCell className="text-right">
+                                <Checkbox
+                                  checked={editAttendance[provider.id] || false}
+                                  onCheckedChange={checked => handleAttendanceChange(provider.id, checked as boolean)}
+                                />
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                      <Button onClick={() => { console.log('Save clicked'); handleSaveAttendance(day); }}>Save Attendance</Button>
+                    </DialogContent>
+                  )}
+                </Dialog>
+              );
+            })}
           </div>
         </CardContent>
       </Card>
