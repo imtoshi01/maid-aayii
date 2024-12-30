@@ -160,65 +160,40 @@ app.get('/api/attendance/:date', authenticateToken, (req: AuthRequest, res: Resp
   );
 });
 
-// Submit or update attendance for the authenticated user's service providers
-app.post('/api/attendance', authenticateToken, (req: AuthRequest, res: Response) => {
+app.post('/api/attendance', authenticateToken, async (req: AuthRequest, res: Response) => {
   const { date, attendance } = req.body;
-  
-  pool.query('BEGIN', (err) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'Internal server error' });
+
+  try {
+    await pool.query('BEGIN');
+
+    for (const [serviceProviderId, present] of Object.entries(attendance)) {
+      const result = await pool.query(
+        'SELECT id FROM service_providers WHERE id = $1 AND user_id = $2',
+        [serviceProviderId, req.userId]
+      );
+
+      if (result.rows.length === 0) {
+        throw new Error('Unauthorized access to service provider');
+      }
+
+      await pool.query(
+        `INSERT INTO attendance (service_provider_id, date, present)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (service_provider_id, date)
+         DO UPDATE SET present = EXCLUDED.present`,
+        [serviceProviderId, date, present]
+      );
     }
 
-    const promises = Object.entries(attendance).map(([serviceProviderId, present]) => {
-      return new Promise<void>((resolve, reject) => {
-        pool.query(
-          'SELECT id FROM service_providers WHERE id = $1 AND user_id = $2',
-          [serviceProviderId, req.userId],
-          (error, result) => {
-            if (error) {
-              reject(error);
-            } else if (result.rows.length === 0) {
-              reject(new Error('Unauthorized access to service provider'));
-            } else {
-              pool.query(
-                'INSERT INTO attendance (service_provider_id, date, present) VALUES ($1, $2, $3) ON CONFLICT (service_provider_id, date) DO UPDATE SET present = $3',
-                [serviceProviderId, date, present],
-                (error) => {
-                  if (error) {
-                    reject(error);
-                  } else {
-                    resolve();
-                  }
-                }
-              );
-            }
-          }
-        );
-      });
-    });
-
-    Promise.all(promises)
-      .then(() => {
-        pool.query('COMMIT', (err) => {
-          if (err) {
-            console.error(err);
-            return res.status(500).json({ error: 'Internal server error' });
-          }
-          res.json({ message: 'Attendance submitted successfully' });
-        });
-      })
-      .catch((error) => {
-        pool.query('ROLLBACK', (err) => {
-          if (err) {
-            console.error(err);
-          }
-          console.error(error);
-          res.status(500).json({ error: 'Internal server error' });
-        });
-      });
-  });
+    await pool.query('COMMIT');
+    res.json({ message: 'Attendance submitted successfully' });
+  } catch (error) {
+    console.error(error);
+    await pool.query('ROLLBACK');
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
+
 
 // Add a new service provider for the authenticated user
 app.post('/api/service-providers', authenticateToken, (req: AuthRequest, res: Response) => {
@@ -240,11 +215,12 @@ app.post('/api/service-providers', authenticateToken, (req: AuthRequest, res: Re
 app.get('/api/monthly-attendance/:year/:month', authenticateToken, (req: AuthRequest, res: Response) => {
   const { year, month } = req.params;
   const startDate = `${year}-${month.padStart(2, '0')}-01`;
-  const endDate = `${year}-${month.padStart(2, '0')}-31`;  // This will work for all months
+  const lastDayOfMonth = new Date(Number(year), Number(month), 0).getDate();  // `0` for the last day of the previous month
+  const endDate = `${year}-${month.padStart(2, '0')}-${lastDayOfMonth.toString().padStart(2, '0')}`;
   console.log(startDate, endDate);
 
   pool.query(
-    `SELECT a.service_provider_id, a.date, a.present, sp.name, sp.role 
+    `SELECT a.service_provider_id, to_char(a.date AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS date, a.present, sp.name, sp.role 
      FROM attendance a 
      JOIN service_providers sp ON a.service_provider_id = sp.id 
      WHERE sp.user_id = $1 AND a.date BETWEEN $2 AND $3
@@ -255,8 +231,13 @@ app.get('/api/monthly-attendance/:year/:month', authenticateToken, (req: AuthReq
         console.error(error);
         return res.status(500).json({ error: 'Internal server error' });
       }
-      console.log(result.rows);
-      res.json(result.rows);
+
+      const formattedRows = result.rows.map(row => ({
+        ...row,
+        date: row.date.split('T')[0]
+      }));
+      console.log(formattedRows);
+      res.json(formattedRows);
     }
   );
 });

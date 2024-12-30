@@ -13,6 +13,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { submitAttendance } from '../lib/api'
+import { useToast } from "@/components/ui/use-toast"
 
 // Mock data for service providers
 const serviceProviders = [
@@ -25,15 +27,40 @@ const serviceProviders = [
 export default function AttendancePage() {
   const [date, setDate] = useState<Date | undefined>(new Date())
   const [attendance, setAttendance] = useState<Record<number, boolean>>({})
+  const { toast } = useToast()
 
   const handleAttendanceChange = (id: number, checked: boolean) => {
     setAttendance(prev => ({ ...prev, [id]: checked }))
   }
 
-  const handleSaveAttendance = () => {
-    // In a real app, this would save the attendance to a database
-    console.log('Saving attendance for', date, attendance)
-    alert('Attendance saved successfully!')
+  const handleSaveAttendance = async () => {
+    if (!date) {
+      toast({
+        title: "Error",
+        description: "Please select a date.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      const formattedDate = date.toISOString().split('T')[0]
+      await submitAttendance(formattedDate, attendance)
+      toast({
+        title: "Success",
+        description: "Attendance saved successfully!",
+        variant: "default",
+      })
+      // Reset attendance state after successful save
+      setAttendance({})
+    } catch (error) {
+      console.error('Error saving attendance:', error)
+      toast({
+        title: "Error",
+        description: "Failed to save attendance. Please try again.",
+        variant: "destructive",
+      })
+    }
   }
 
   return (

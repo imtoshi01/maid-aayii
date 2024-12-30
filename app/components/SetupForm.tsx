@@ -36,7 +36,7 @@ export default function SetupForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      await updateUserDetails({ name, address, latitude, longitude })
+      await updateUserDetails({ name, email, address, latitude, longitude })
       router.push('/')
     } catch (error) {
       setError('Failed to update user details. Please try again.')

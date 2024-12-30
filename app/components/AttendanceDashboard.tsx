@@ -68,7 +68,9 @@ export default function AttendanceDashboard() {
 
   const handleSubmit = async () => {
     try {
-      const dateString = date.toISOString().split('T')[0];
+      const day = date.getDate();
+      const utcDate = new Date(Date.UTC(date.getFullYear(), date.getMonth(), day));
+      const dateString = utcDate.toISOString().split('T')[0];
       await submitAttendance(dateString, attendance);
       setIsSubmitted(true);
     } catch (error) {

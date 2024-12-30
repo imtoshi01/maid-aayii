@@ -80,8 +80,7 @@ export default function PreviousAttendance() {
   const isPresentMap = useMemo(() => {
     const map = new Map<string, boolean>();
     monthlyAttendance.forEach(record => {
-      const normalizedDate = new Date(record.date).toISOString().split('T')[0]; // Convert to YYYY-MM-DD format
-      map.set(normalizedDate, record.present);
+      map.set(record.date, record.present);
     });
     return map;
   }, [monthlyAttendance]);
@@ -115,7 +114,7 @@ export default function PreviousAttendance() {
   };
 
   const handleDateClick = (day: number) => {
-    const clickedDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+    const clickedDate = new Date(Date.UTC(currentDate.getFullYear(), currentDate.getMonth(), day));
     setSelectedDate(clickedDate);
     const dateString = clickedDate.toISOString().split('T')[0];
     const attendanceMap: Record<number, boolean> = {};
@@ -127,6 +126,11 @@ export default function PreviousAttendance() {
     setEditAttendance(attendanceMap);
   };
 
+  const handleDialogClose = () => {
+    setEditAttendance({}); // Reset editAttendance on dialog close
+    setSelectedDate(null);
+  };
+
   const handleAttendanceChange = (id: number, checked: boolean) => {
     setEditAttendance(prev => ({
       ...prev,
@@ -135,7 +139,7 @@ export default function PreviousAttendance() {
   };
 
   const handleSaveAttendance = async (day: number) => {
-    const saveDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day+1);
+    const saveDate = new Date(Date.UTC(currentDate.getFullYear(), currentDate.getMonth(), day));
     const dateString = saveDate.toISOString().split('T')[0];
     const res = await submitAttendance(dateString, editAttendance);
     console.log(res);
@@ -171,14 +175,17 @@ export default function PreviousAttendance() {
             ))}
             {generateCalendarDays().map((day, index) => {
               const dateString = day
-                ? new Date(currentDate.getFullYear(), currentDate.getMonth(), day).toISOString().split('T')[0]
+                ? new Date(Date.UTC(currentDate.getFullYear(), currentDate.getMonth(), day)).toISOString().split('T')[0]
                 : null;
               const isPresent = dateString ? isPresentMap.get(dateString) || false : false;
 
               return (
-                <Dialog key={index}>
+                <Dialog key={index}       onOpenChange={(isOpen) => {
+                  if (!isOpen) handleDialogClose(); // Reset editAttendance when the dialog closes
+                }}>
                   <DialogTrigger asChild>
                     <div
+                      onClick={() => day && handleDateClick(day)} 
                       className={`aspect-square border p-1 text-sm cursor-pointer ${day ? 'hover:bg-gray-100' : ''} ${
                         isPresent ? 'bg-red-100' : ''
                       }`}
@@ -186,11 +193,19 @@ export default function PreviousAttendance() {
                       {day}
                       {day && (
                         <div className="flex flex-wrap gap-1 mt-1">
-                          {serviceProviders.map(provider => {
-                            return isPresent ? (
-                              <div key={provider.id} className={`w-2 h-2 rounded-full ${provider.color}`} />
-                            ) : null;
-                          })}
+                        {serviceProviders.map(provider => {
+                          const isPresent = monthlyAttendance.some(record => {
+                            const normalizedDate = record.date;
+                            return record.service_provider_id === provider.id && 
+                            normalizedDate === dateString && 
+                            record.present
+                          }
+
+                          );
+                          return isPresent ? (
+                            <div key={provider.id} className={`w-2 h-2 rounded-full ${provider.color}`} />
+                          ) : null;
+                        })}
                         </div>
                       )}
                     </div>
