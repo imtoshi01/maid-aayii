@@ -1,7 +1,12 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001/api';
 
 const getHeaders = () => {
-  const token = localStorage.getItem('token');
+  // Extract token from cookies on the client side
+  const token = document.cookie
+    .split('; ')
+    .find((row) => row.startsWith('token='))
+    ?.split('=')[1] || '';
+
   return {
     'Authorization': token ? `Bearer ${token}` : '',
     'Content-Type': 'application/json',
@@ -39,6 +44,7 @@ export async function verifyOTP(mobile: string, otp: string) {
 
   const data = await response.json();
   localStorage.setItem('token', data.token);
+  document.cookie = `token=${data.token}; path=/; secure; samesite=strict;`;
   return data;
 }
 

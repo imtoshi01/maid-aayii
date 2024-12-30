@@ -108,7 +108,7 @@ app.post('/api/verify-otp', async (req: Request, res: Response) => {
     }
 
     // Generate JWT
-    const token = jwt.sign({ userId }, jwtSecret, { expiresIn: '1d' });
+    const token = jwt.sign({ userId }, jwtSecret);
 
     res.json({ token, isNewUser: userResult.rows.length === 0 });
   } catch (error) {

@@ -14,15 +14,16 @@ export default function Home() {
   useEffect(() => {
     const token = localStorage.getItem('token')
     if (!token) {
-      router.push('/login')
+      router.push('/register')
     } else {
       setIsAuthenticated(true)
     }
   }, [router])
 
   const handleLogout = () => {
-    localStorage.removeItem('token')
-    router.push('/login')
+    localStorage.removeItem('token');
+    document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC; secure; samesite=strict;';
+    router.push('/register')
   }
 
   if (!isAuthenticated) {
