@@ -214,17 +214,27 @@ app.post('/api/service-providers', authenticateToken, (req: AuthRequest, res: Re
 // Get monthly attendance for all service providers
 app.get('/api/monthly-attendance/:year/:month', authenticateToken, (req: AuthRequest, res: Response) => {
   const { year, month } = req.params;
+  
+  // Calculate the start and end date for the month
   const startDate = `${year}-${month.padStart(2, '0')}-01`;
-  const lastDayOfMonth = new Date(Number(year), Number(month), 0).getDate();  // `0` for the last day of the previous month
+  const lastDayOfMonth = new Date(Number(year), Number(month), 0).getDate();
   const endDate = `${year}-${month.padStart(2, '0')}-${lastDayOfMonth.toString().padStart(2, '0')}`;
+
   console.log(startDate, endDate);
 
   pool.query(
-    `SELECT a.service_provider_id, to_char(a.date AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS date, a.present, sp.name, sp.role 
-     FROM attendance a 
-     JOIN service_providers sp ON a.service_provider_id = sp.id 
-     WHERE sp.user_id = $1 AND a.date BETWEEN $2 AND $3
-     ORDER BY a.service_provider_id, a.date`,
+    `SELECT 
+        sp.id AS service_provider_id,
+        sp.name,
+        sp.role,
+        to_char(a.date AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS date,
+        COALESCE(a.present, false) AS present
+     FROM service_providers sp
+     LEFT JOIN attendance a 
+       ON sp.id = a.service_provider_id 
+       AND a.date BETWEEN $2 AND $3
+     WHERE sp.user_id = $1
+     ORDER BY sp.id, a.date`,
     [req.userId, startDate, endDate],
     (error, result) => {
       if (error) {
@@ -232,15 +242,21 @@ app.get('/api/monthly-attendance/:year/:month', authenticateToken, (req: AuthReq
         return res.status(500).json({ error: 'Internal server error' });
       }
 
+      // Ensure proper formatting of date
       const formattedRows = result.rows.map(row => ({
-        ...row,
-        date: row.date.split('T')[0]
+        service_provider_id: row.service_provider_id,
+        name: row.name,
+        role: row.role,
+        date: row.date ? row.date.split('T')[0] : null,
+        present: row.present
       }));
+
       console.log(formattedRows);
       res.json(formattedRows);
     }
   );
 });
+
 
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);

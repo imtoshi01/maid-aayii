@@ -80,7 +80,7 @@ export default function PreviousAttendance() {
   const isPresentMap = useMemo(() => {
     const map = new Map<string, boolean>();
     monthlyAttendance.forEach(record => {
-      map.set(record.date, record.present);
+      map.set(record.date, (record.present || map.get(record.date) || false));
     });
     return map;
   }, [monthlyAttendance]);
