@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/table';
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogHeader,
   DialogTitle,
@@ -240,7 +241,11 @@ export default function PreviousAttendance() {
                           ))}
                         </TableBody>
                       </Table>
-                      <Button onClick={() => { console.log('Save clicked'); handleSaveAttendance(day); }}>Save Attendance</Button>
+                      <DialogClose asChild>
+                      <Button onClick={() => { console.log('Save clicked'); handleSaveAttendance(day); }}>
+                        Save Attendance
+                        </Button>
+                      </DialogClose>
                     </DialogContent>
                   )}
                 </Dialog>
