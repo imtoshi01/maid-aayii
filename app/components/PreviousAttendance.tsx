@@ -156,16 +156,16 @@ export default function PreviousAttendance() {
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle>
-            {currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
-          </CardTitle>
-          <div className="space-x-2">
+      <CardHeader className="pb-4">
+          <div className="flex justify-center items-center gap-4">
             <Button variant="outline" size="icon" onClick={() => navigateMonth(-1)}>
-              <ChevronLeft className="h-4 w-4" />
+              <ChevronLeft className="h-5 w-5" />
             </Button>
+            <CardTitle className="text-2xl font-semibold">
+              {currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
+            </CardTitle>
             <Button variant="outline" size="icon" onClick={() => navigateMonth(1)}>
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className="h-5 w-5" />
             </Button>
           </div>
         </CardHeader>
