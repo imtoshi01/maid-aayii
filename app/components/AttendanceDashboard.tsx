@@ -13,6 +13,8 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { getServiceProviders, getAttendance, submitAttendance } from '../lib/api'
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { set } from 'date-fns'
 
 interface ServiceProvider {
   id: number;
@@ -33,8 +35,9 @@ export default function AttendanceDashboard() {
   const [date, setDate] = useState<Date>(new Date());
   const [serviceProviders, setServiceProviders] = useState<ServiceProvider[]>([]);
   const [attendance, setAttendance] = useState<Record<number, boolean>>({});
-  const [isSubmitted, setIsSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -42,14 +45,13 @@ export default function AttendanceDashboard() {
       try {
         const providers = await getServiceProviders();
         setServiceProviders(providers);
-        const dateString = date.toISOString().split('T')[0];
+        const dateString = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())).toISOString().split('T')[0];
         const attendanceData = await getAttendance(dateString);
         const attendanceMap: Record<number, boolean> = {};
         attendanceData.forEach((record: AttendanceRecord) => {
           attendanceMap[record.service_provider_id] = record.present;
         });
         setAttendance(attendanceMap);
-        setIsSubmitted(Object.keys(attendanceMap).length > 0);
       } catch (error) {
         console.error('Error fetching data:', error);
       }
@@ -64,6 +66,8 @@ export default function AttendanceDashboard() {
       ...prev,
       [id]: checked
     }));
+    setIsSubmitted(false); // Reset submission state when attendance changes
+    setNotification(null); // Clear any previous notifications
   };
 
   const handleSubmit = async () => {
@@ -73,13 +77,11 @@ export default function AttendanceDashboard() {
       const dateString = utcDate.toISOString().split('T')[0];
       await submitAttendance(dateString, attendance);
       setIsSubmitted(true);
+      setNotification({ type: 'success', message: 'Attendance submitted successfully!' });
     } catch (error) {
       console.error('Error submitting attendance:', error);
+      setNotification({ type: 'error', message: 'Failed to submit attendance. Please try again.' });
     }
-  };
-
-  const handleEdit = () => {
-    setIsSubmitted(false);
   };
 
   if (isLoading) {
@@ -93,13 +95,19 @@ export default function AttendanceDashboard() {
           <CardTitle>Today's Date: {date.toDateString()}</CardTitle>
         </CardHeader>
         <CardContent>
+          {notification && (
+            <Alert variant={notification.type === 'success' ? 'default' : 'destructive'} className="mb-4">
+              <AlertTitle>{notification.type === 'success' ? 'Success' : 'Error'}</AlertTitle>
+              <AlertDescription>{notification.message}</AlertDescription>
+            </Alert>
+          )}
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-[100px]">Name</TableHead>
                   <TableHead>Role</TableHead>
-                  <TableHead className="text-right">Present</TableHead>
+                  <TableHead className="text-right">Took leave</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -111,7 +119,6 @@ export default function AttendanceDashboard() {
                       <Checkbox
                         checked={attendance[provider.id] || false}
                         onCheckedChange={(checked) => handleAttendanceChange(provider.id, checked as boolean)}
-                        disabled={isSubmitted}
                       />
                     </TableCell>
                   </TableRow>
@@ -119,14 +126,14 @@ export default function AttendanceDashboard() {
               </TableBody>
             </Table>
           </div>
-          {isSubmitted ? (
-            <Button onClick={handleEdit} className="w-full mt-4">Edit Attendance</Button>
-          ) : (
-            <Button onClick={handleSubmit} className="w-full mt-4">Submit Attendance</Button>
-          )}
+          <Button 
+            onClick={handleSubmit} 
+            className={`w-full mt-4 ${isSubmitted ? 'bg-green-500 hover:bg-green-600 text-white' : ''}`}
+          >
+            {isSubmitted ? '✔ Attendance Submitted' : 'Submit Attendance'}
+          </Button>
         </CardContent>
       </Card>
     </div>
   )
 }
-

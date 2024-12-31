@@ -223,7 +223,7 @@ export default function PreviousAttendance() {
                           <TableRow>
                             <TableHead>Name</TableHead>
                             <TableHead>Role</TableHead>
-                            <TableHead className="text-right">Present</TableHead>
+                            <TableHead className="text-right">Took leave</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -264,7 +264,7 @@ export default function PreviousAttendance() {
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Role</TableHead>
-                <TableHead className="text-right">Days Present</TableHead>
+                <TableHead className="text-right">Days Absent</TableHead>
                 <TableHead className="text-right">Attendance Color</TableHead>
               </TableRow>
             </TableHeader>

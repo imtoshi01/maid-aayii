@@ -63,7 +63,7 @@ export default function AttendancePage() {
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Role</TableHead>
-                  <TableHead>Present</TableHead>
+                  <TableHead>Took leave</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
