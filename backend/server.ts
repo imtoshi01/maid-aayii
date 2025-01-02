@@ -185,10 +185,10 @@ app.post('/api/attendance', authenticateToken, async (req: AuthRequest, res: Res
 
       // Insert or update attendance with notes
       await pool.query(
-        `INSERT INTO attendance (service_provider_id, date, present, notes)
+        `INSERT INTO attendance (service_provider_id, date, present, note)
          VALUES ($1, $2, $3, $4)
          ON CONFLICT (service_provider_id, date)
-         DO UPDATE SET present = EXCLUDED.present, notes = EXCLUDED.notes`,
+         DO UPDATE SET present = EXCLUDED.present, note = EXCLUDED.note`,
         [service_provider_id, date, present, note]
       );
     }
@@ -236,6 +236,7 @@ app.get('/api/monthly-attendance/:year/:month', authenticateToken, (req: AuthReq
         sp.id AS service_provider_id,
         sp.name,
         sp.role,
+        a.note,
         to_char(a.date AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS date,
         COALESCE(a.present, false) AS present
      FROM service_providers sp
@@ -257,7 +258,8 @@ app.get('/api/monthly-attendance/:year/:month', authenticateToken, (req: AuthReq
         name: row.name,
         role: row.role,
         date: row.date ? row.date.split('T')[0] : null,
-        present: row.present
+        present: row.present,
+        note:row.note
       }));
 
       console.log(formattedRows);
