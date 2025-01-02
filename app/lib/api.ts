@@ -88,15 +88,32 @@ export async function getAttendance(date: string) {
   return response.json();
 }
 
-export async function submitAttendance(date: string, attendance: Record<number, boolean>) {
+interface AttendanceRecord {
+  service_provider_id: number;
+  present: boolean;
+  note: string;
+}
+
+/**
+ * Submit attendance and notes for service providers.
+ * @param {string} date - The date in YYYY-MM-DD format.
+ * @param {AttendanceRecord[]} attendance - Array of attendance records.
+ * @returns {Promise<void>}
+ */
+export async function submitAttendance(date: string, attendance: AttendanceRecord[]) {
   const response = await fetch(`${API_BASE_URL}/attendance`, {
     method: 'POST',
     headers: getHeaders(),
-    body: JSON.stringify({ date, attendance }),
+    body: JSON.stringify({
+      date,
+      attendance,
+    }),
   });
+
   if (!response.ok) {
     throw new Error('Failed to submit attendance');
   }
+
   return response.json();
 }
 

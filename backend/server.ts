@@ -163,36 +163,45 @@ app.get('/api/attendance/:date', authenticateToken, (req: AuthRequest, res: Resp
 app.post('/api/attendance', authenticateToken, async (req: AuthRequest, res: Response) => {
   const { date, attendance } = req.body;
 
+  if (!date || !Array.isArray(attendance)) {
+    res.status(400).json({ error: 'Invalid payload structure' });
+  }
+
   try {
     await pool.query('BEGIN');
 
-    for (const [serviceProviderId, present] of Object.entries(attendance)) {
+    for (const record of attendance) {
+      const { service_provider_id, present, note } = record;
+
+      // Verify service provider ownership
       const result = await pool.query(
         'SELECT id FROM service_providers WHERE id = $1 AND user_id = $2',
-        [serviceProviderId, req.userId]
+        [service_provider_id, req.userId]
       );
 
       if (result.rows.length === 0) {
         throw new Error('Unauthorized access to service provider');
       }
 
+      // Insert or update attendance with notes
       await pool.query(
-        `INSERT INTO attendance (service_provider_id, date, present)
-         VALUES ($1, $2, $3)
+        `INSERT INTO attendance (service_provider_id, date, present, notes)
+         VALUES ($1, $2, $3, $4)
          ON CONFLICT (service_provider_id, date)
-         DO UPDATE SET present = EXCLUDED.present`,
-        [serviceProviderId, date, present]
+         DO UPDATE SET present = EXCLUDED.present, notes = EXCLUDED.notes`,
+        [service_provider_id, date, present, note]
       );
     }
 
     await pool.query('COMMIT');
     res.json({ message: 'Attendance submitted successfully' });
   } catch (error) {
-    console.error(error);
+    console.error('Error processing attendance:', error);
     await pool.query('ROLLBACK');
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Failed to submit attendance' });
   }
 });
+
 
 
 // Add a new service provider for the authenticated user

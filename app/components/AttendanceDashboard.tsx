@@ -14,7 +14,6 @@ import {
 } from "@/components/ui/table"
 import { getServiceProviders, getAttendance, submitAttendance } from '../lib/api'
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { set } from 'date-fns'
 
 interface ServiceProvider {
   id: number;
@@ -29,29 +28,39 @@ interface AttendanceRecord {
   present: boolean;
   name: string;
   role: string;
+  note: string;
 }
 
 export default function AttendanceDashboard() {
   const [date, setDate] = useState<Date>(new Date());
   const [serviceProviders, setServiceProviders] = useState<ServiceProvider[]>([]);
   const [attendance, setAttendance] = useState<Record<number, boolean>>({});
+  const [notes, setNotes] = useState<Record<number, string>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
+  // 📅 Fetch Service Providers and Attendance
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
       try {
         const providers = await getServiceProviders();
         setServiceProviders(providers);
+        
         const dateString = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())).toISOString().split('T')[0];
         const attendanceData = await getAttendance(dateString);
+        
         const attendanceMap: Record<number, boolean> = {};
+        const notesMap: Record<number, string> = {};
+        
         attendanceData.forEach((record: AttendanceRecord) => {
           attendanceMap[record.service_provider_id] = record.present;
+          notesMap[record.service_provider_id] = record.note || '';
         });
+        
         setAttendance(attendanceMap);
+        setNotes(notesMap);
       } catch (error) {
         console.error('Error fetching data:', error);
       }
@@ -61,21 +70,39 @@ export default function AttendanceDashboard() {
     fetchData();
   }, [date]);
 
+  // ✅ Handle Attendance Change
   const handleAttendanceChange = (id: number, checked: boolean) => {
     setAttendance(prev => ({
       ...prev,
       [id]: checked
     }));
-    setIsSubmitted(false); // Reset submission state when attendance changes
-    setNotification(null); // Clear any previous notifications
+    setIsSubmitted(false);
+    setNotification(null);
   };
 
+  // 📝 Handle Notes Change
+  const handleNoteChange = (id: number, value: string) => {
+    setNotes(prev => ({
+      ...prev,
+      [id]: value
+    }));
+    setIsSubmitted(false);
+    setNotification(null);
+  };
+
+  // 🚀 Submit Attendance and Notes
   const handleSubmit = async () => {
     try {
-      const day = date.getDate();
-      const utcDate = new Date(Date.UTC(date.getFullYear(), date.getMonth(), day));
+      const utcDate = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
       const dateString = utcDate.toISOString().split('T')[0];
-      await submitAttendance(dateString, attendance);
+      
+      const submissionData = serviceProviders.map(provider => ({
+        service_provider_id: provider.id,
+        present: attendance[provider.id] || false,
+        note: notes[provider.id] || ''
+      }));
+      
+      await submitAttendance(dateString, submissionData);
       setIsSubmitted(true);
       setNotification({ type: 'success', message: 'Attendance submitted successfully!' });
     } catch (error) {
@@ -84,15 +111,17 @@ export default function AttendanceDashboard() {
     }
   };
 
+  // 🕑 Loading State
   if (isLoading) {
     return <div>Loading...</div>;
   }
 
+  // 🖥️ UI Rendering
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Today's Date: {date.toDateString()}</CardTitle>
+          <CardTitle className="text-center">Today's Date: {date.toDateString()}</CardTitle>
         </CardHeader>
         <CardContent>
           {notification && (
@@ -105,20 +134,30 @@ export default function AttendanceDashboard() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[100px]">Name</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead className="text-right">Took leave</TableHead>
+                  <TableHead className="text-center">Name</TableHead>
+                  <TableHead className="text-center">Role</TableHead>
+                  <TableHead className="text-center">Took leave</TableHead>
+                  <TableHead className="text-center">Notes & Comments</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {serviceProviders.map((provider) => (
                   <TableRow key={provider.id}>
-                    <TableCell className="font-medium">{provider.name}</TableCell>
-                    <TableCell>{provider.role}</TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="font-medium text-center">{provider.name}</TableCell>
+                    <TableCell className="text-center">{provider.role}</TableCell>
+                    <TableCell className="text-center">
                       <Checkbox
                         checked={attendance[provider.id] || false}
                         onCheckedChange={(checked) => handleAttendanceChange(provider.id, checked as boolean)}
+                      />
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <textarea
+                        className="w-full p-2 border rounded-md"
+                        maxLength={200}
+                        placeholder="Add a note (max 200 characters)"
+                        value={notes[provider.id] || ''}
+                        onChange={(e) => handleNoteChange(provider.id, e.target.value)}
                       />
                     </TableCell>
                   </TableRow>
@@ -135,5 +174,5 @@ export default function AttendanceDashboard() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

@@ -34,6 +34,7 @@ interface AttendanceRecord {
   service_provider_id: number;
   date: string;
   present: boolean;
+  note: string;
 }
 
 const colors = ['bg-red-500', 'bg-blue-500', 'bg-green-500', 'bg-yellow-500', 'bg-purple-500'];
@@ -41,11 +42,12 @@ const colors = ['bg-red-500', 'bg-blue-500', 'bg-green-500', 'bg-yellow-500', 'b
 export default function PreviousAttendance() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [editAttendance, setEditAttendance] = useState<Record<number, boolean>>({});
+  const [editAttendance, setEditAttendance] = useState<Record<number, { present: boolean; note: string }>>({});
   const [serviceProviders, setServiceProviders] = useState<ServiceProvider[]>([]);
   const [monthlyAttendance, setMonthlyAttendance] = useState<AttendanceRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // 📅 Fetch Monthly Attendance
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
@@ -118,10 +120,14 @@ export default function PreviousAttendance() {
     const clickedDate = new Date(Date.UTC(currentDate.getFullYear(), currentDate.getMonth(), day));
     setSelectedDate(clickedDate);
     const dateString = clickedDate.toISOString().split('T')[0];
-    const attendanceMap: Record<number, boolean> = {};
-    monthlyAttendance.forEach(record => {
+    const attendanceMap: Record<number, { present: boolean; note: string }> = {};
+
+    monthlyAttendance.forEach((record) => {
       if (record.date === dateString) {
-        attendanceMap[record.service_provider_id] = record.present;
+        attendanceMap[record.service_provider_id] = {
+          present: record.present,
+          note: record.note || '',
+        };
       }
     });
     setEditAttendance(attendanceMap);
@@ -133,17 +139,38 @@ export default function PreviousAttendance() {
   };
 
   const handleAttendanceChange = (id: number, checked: boolean) => {
-    setEditAttendance(prev => ({
+    setEditAttendance((prev) => ({
       ...prev,
-      [id]: checked,
+      [id]: {
+        ...prev[id],
+        present: checked,
+      },
     }));
   };
 
+  const handleNoteChange = (id: number, value: string) => {
+    setEditAttendance((prev) => ({
+      ...prev,
+      [id]: {
+        ...prev[id],
+        note: value,
+      },
+    }));
+  };
+
+  // 🚀 Save Attendance and Notes
   const handleSaveAttendance = async (day: number) => {
     const saveDate = new Date(Date.UTC(currentDate.getFullYear(), currentDate.getMonth(), day));
     const dateString = saveDate.toISOString().split('T')[0];
-    const res = await submitAttendance(dateString, editAttendance);
-    console.log(res);
+
+    const submissionData = serviceProviders.map((provider) => ({
+      service_provider_id: provider.id,
+      present: editAttendance[provider.id]?.present || false,
+      note: editAttendance[provider.id]?.note || '',
+    }));
+
+    await submitAttendance(dateString, submissionData);
+
     setSelectedDate(null);
     const attendanceData = await getMonthlyAttendance(currentDate.getFullYear(), currentDate.getMonth() + 1);
     setMonthlyAttendance(attendanceData);
@@ -227,14 +254,21 @@ export default function PreviousAttendance() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {serviceProviders.map(provider => (
+                          {serviceProviders.map((provider) => (
                             <TableRow key={provider.id}>
                               <TableCell>{provider.name}</TableCell>
                               <TableCell>{provider.role}</TableCell>
-                              <TableCell className="text-right">
+                              <TableCell>
                                 <Checkbox
-                                  checked={editAttendance[provider.id] || false}
-                                  onCheckedChange={checked => handleAttendanceChange(provider.id, checked as boolean)}
+                                  checked={editAttendance[provider.id]?.present || false}
+                                  onCheckedChange={(checked) => handleAttendanceChange(provider.id, checked as boolean)}
+                                />
+                                <textarea
+                                  className="w-full mt-2 p-1 border"
+                                  maxLength={200}
+                                  placeholder="Add note"
+                                  value={editAttendance[provider.id]?.note || ''}
+                                  onChange={(e) => handleNoteChange(provider.id, e.target.value)}
                                 />
                               </TableCell>
                             </TableRow>
@@ -242,9 +276,7 @@ export default function PreviousAttendance() {
                         </TableBody>
                       </Table>
                       <DialogClose asChild>
-                      <Button onClick={() => { console.log('Save clicked'); handleSaveAttendance(day); }}>
-                        Save Attendance
-                        </Button>
+                        <Button onClick={() => handleSaveAttendance(day)}>Save Attendance</Button>
                       </DialogClose>
                     </DialogContent>
                   )}
@@ -289,6 +321,5 @@ export default function PreviousAttendance() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }
-
