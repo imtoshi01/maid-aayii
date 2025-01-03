@@ -268,6 +268,45 @@ app.get('/api/monthly-attendance/:year/:month', authenticateToken, (req: AuthReq
   );
 });
 
+// Get details of a specific service provider
+app.get('/api/service-providers/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
+  const { id } = req.params;
+  try {
+    const result = await pool.query(
+      'SELECT * FROM service_providers WHERE id = $1 AND user_id = $2',
+      [id, req.userId]
+    );
+    if (result.rows.length === 0) {
+      res.status(404).json({ error: 'Service provider not found' });
+    }
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error fetching service provider details:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Update a specific service provider
+app.put('/api/service-providers/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
+  const { id } = req.params;
+  const { name, role, dailySalary, allowedLeaves, contactNumber, upiId } = req.body;
+  try {
+    const result = await pool.query(
+      `UPDATE service_providers 
+       SET name = $1, role = $2, daily_salary = $3, allowed_leaves = $4, contact_number = $5, upi_id = $6
+       WHERE id = $7 AND user_id = $8
+       RETURNING *`,
+      [name, role, dailySalary, allowedLeaves, contactNumber, upiId, id, req.userId]
+    );
+    if (result.rows.length === 0) {
+       res.status(404).json({ error: 'Service provider not found' });
+    }
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error updating service provider:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
 
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);

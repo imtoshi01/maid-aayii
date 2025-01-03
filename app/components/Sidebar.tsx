@@ -14,9 +14,10 @@ import {
 } from "@/components/ui/sheet"
 import { getServiceProviders } from '../lib/api'
 import AddServiceProviderForm from './AddServiceProviderForm'
+import Link from 'next/link'
 
 export function Sidebar() {
-  const [isOpen, setIsOpen] = useState(false)
+  const [isOpen, setIsOpen] = useState(false);
   const [serviceProviders, setServiceProviders] = useState([]);
 
   useEffect(() => {
@@ -38,17 +39,25 @@ export function Sidebar() {
           Menu
         </Button>
       </SheetTrigger>
-      <div className="hidden lg:block w-64 h-screen bg-gray-100 p-4">
-        <h2 className="text-xl font-bold mb-4">Menu</h2>
+      <div className="hidden lg:block w-64 h-screen bg-gray-100 p-4 overflow-y-auto">
+        <h2 className="text-xl font-bold mb-4 text-center">Menu</h2>
         <div className="mt-4">
-          <h3 className="text-lg font-bold mb-2">Service Providers List</h3>
-          <ul className="list-disc pl-4">
+          <h3 className="text-lg font-bold mb-2 text-center">Service Providers List</h3>
+          <ul className="space-y-1 text-center">
             {serviceProviders.map((provider) => (
-              <li key={provider.id}>{provider.name}</li>
+              <li key={provider.id} className="hover:bg-gray-200 rounded-md p-2">
+                <Link href={`/service-providers/${provider.id}`} className="text-blue-600 font-bold hover:underline">
+                  {provider.name}
+                </Link>
+              </li>
             ))}
           </ul>
         </div>
-        <Button onClick={() => setIsOpen(true)}>Add New Service Provider</Button>
+        <div className="mt-6">
+          <Button onClick={() => setIsOpen(true)} className="w-full">
+            Add New Service Provider
+          </Button>
+        </div>
       </div>
       <SheetContent side="left">
         <SheetHeader>

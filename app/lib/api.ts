@@ -68,6 +68,30 @@ export async function updateUserDetails(userData: {
   return response.json();
 }
 
+
+export async function getServiceProviderDetails(id: string) {
+  const response = await fetch(`${API_BASE_URL}/service-providers/${id}`, {
+    headers: getHeaders(),
+  });
+  if (!response.ok) {
+    throw new Error('Failed to fetch service provider details');
+  }
+  return response.json();
+}
+
+export async function updateServiceProvider(serviceProvider: any) {
+  const response = await fetch(`${API_BASE_URL}/service-providers/${serviceProvider.id}`, {
+    method: 'PUT',
+    headers: getHeaders(),
+    body: JSON.stringify(serviceProvider),
+  });
+  if (!response.ok) {
+    throw new Error('Failed to update service provider');
+  }
+  return response.json();
+}
+
+
 export async function getServiceProviders() {
   const response = await fetch(`${API_BASE_URL}/service-providers`, {
     headers: getHeaders(),
