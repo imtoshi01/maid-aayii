@@ -53,11 +53,33 @@ export default function RegistrationForm() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
-      <Card className="w-full max-w-md">
+    <div 
+      className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-br from-orange-50 to-blue-50 bg-[length:auto_100%] md:bg-[length:100%_auto]"
+      style={{
+        backgroundImage: 'url("https://res.cloudinary.com/dgmj0hyda/image/upload/v1735899471/DALL_E_2025-01-03_15.47.19_-_A_cheerful_Indian_housewife_in_traditional_attire_proudly_holding_a_smartphone_displaying_an_overlay_of_app_interface_graphics_showing_maid_attendanc_rtcaq1.webp")',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+        backgroundAttachment: 'fixed',
+        minHeight: '100vh',
+        height: 'auto',
+      }}
+    >
+      <div className="w-full max-w-md text-center mb-8">
+        <h1 className="text-4xl font-bold text-blue-600 mb-2">
+          KaamKiDairy
+        </h1>
+        <p className="text-orange-600 text-lg">
+          आपकी सेवा में हमेशा तत्पर
+        </p>
+      </div>
+      
+      <Card className="w-full max-w-md bg-white/95 backdrop-blur-sm border-2 border-orange-100">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">Welcome</CardTitle>
-          <CardDescription className="text-center">
+          <CardTitle className="text-2xl font-bold text-center bg-gradient-to-r from-blue-600 to-orange-600 bg-clip-text text-transparent">
+            Welcome
+          </CardTitle>
+          <CardDescription className="text-center text-gray-600">
             Enter your mobile number to get started
           </CardDescription>
         </CardHeader>
@@ -65,28 +87,28 @@ export default function RegistrationForm() {
           {!otpSent ? (
             <form onSubmit={handleRequestOTP} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="mobile">Mobile Number</Label>
+                <Label htmlFor="mobile" className="text-gray-700">Mobile Number</Label>
                 <div className="relative">
-                  <Phone className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  <Phone className="absolute left-3 top-3 h-4 w-4 text-blue-500" />
                   <Input
                     id="mobile"
                     type="tel"
                     placeholder="Enter your mobile number"
                     value={mobile}
                     onChange={(e) => setMobile(e.target.value)}
-                    className="pl-10"
+                    className="pl-10 border-2 border-orange-100 focus:border-blue-500"
                     pattern="[0-9]{10}"
                     maxLength={10}
                     required
                   />
                 </div>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-gray-600">
                   We'll send you a one-time password
                 </p>
               </div>
               <Button 
                 type="submit" 
-                className="w-full" 
+                className="w-full bg-gradient-to-r from-blue-600 to-orange-600 hover:from-blue-700 hover:to-orange-700 transition-all duration-300"
                 disabled={isLoading || mobile.length !== 10}
               >
                 {isLoading ? (
@@ -105,7 +127,7 @@ export default function RegistrationForm() {
           ) : (
             <form onSubmit={handleVerifyOTP} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="otp">Enter OTP</Label>
+                <Label htmlFor="otp" className="text-gray-700">Enter OTP</Label>
                 <Input
                   id="otp"
                   type="text"
@@ -115,15 +137,15 @@ export default function RegistrationForm() {
                   pattern="[0-9]{6}"
                   maxLength={6}
                   required
-                  className="text-center text-2xl tracking-wider"
+                  className="text-center text-2xl tracking-wider border-2 border-orange-100 focus:border-blue-500"
                 />
                 <div className="flex justify-between items-center">
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-gray-600">
                     OTP sent to {mobile}
                   </p>
                   <Button 
                     variant="link" 
-                    className="p-0 h-auto"
+                    className="p-0 h-auto text-blue-600 hover:text-orange-600"
                     onClick={() => setOtpSent(false)}
                     type="button"
                   >
@@ -133,7 +155,7 @@ export default function RegistrationForm() {
               </div>
               <Button 
                 type="submit" 
-                className="w-full"
+                className="w-full bg-gradient-to-r from-blue-600 to-orange-600 hover:from-blue-700 hover:to-orange-700 transition-all duration-300"
                 disabled={isLoading || otp.length !== 6}
               >
                 {isLoading ? (
@@ -148,7 +170,7 @@ export default function RegistrationForm() {
             </form>
           )}
           {error && (
-            <Alert variant="destructive" className="mt-4">
+            <Alert variant="destructive" className="mt-4 border-2 border-red-200">
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
