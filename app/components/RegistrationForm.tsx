@@ -65,11 +65,11 @@ export default function RegistrationForm() {
         height: 'auto',
       }}
     >
-      <div className="w-full max-w-md text-center mb-8">
-        <h1 className="text-4xl font-bold text-blue-600 mb-2">
+      <div className="w-full max-w-md text-center mb-8 bg-white/80 backdrop-blur-sm p-4 rounded-lg shadow-lg">
+        <h1 className="text-4xl font-bold text-blue-600 mb-2 text-shadow">
           KaamKiDairy
         </h1>
-        <p className="text-orange-600 text-lg">
+        <p className="text-orange-600 text-lg font-semibold">
           आपकी सेवा में हमेशा तत्पर
         </p>
       </div>
